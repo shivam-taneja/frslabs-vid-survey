@@ -7,6 +7,19 @@ router = APIRouter(
 )
 
 
+@router.get("")
+async def list_surveys():
+    # Returning mock data for the dashboard list
+    return [
+        {
+            "id": "survey_123",
+            "title": "Initial User Onboarding Survey",
+            "is_active": True,
+            "created_at": "2026-03-09T10:00:00Z",
+        }
+    ]
+
+
 @router.post("")
 async def create_survey(payload: CreateSurveyPayload):
     return {
