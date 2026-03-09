@@ -1,19 +1,28 @@
-from fastapi import APIRouter, File, UploadFile, Form
+from fastapi import APIRouter, Depends, File, UploadFile, Form, Request
 from fastapi.responses import StreamingResponse
-import io
-import zipfile
+from sqlalchemy.orm import Session
 
+from db.database import get_db
 from core.interceptors import ApiResponseRoute
 from .schemas import SaveAnswersPayload
+from .service import SubmissionService
 
 router = APIRouter(
     prefix="/api/submissions", tags=["Submissions"], route_class=ApiResponseRoute
 )
 
 
+def get_service(db: Session = Depends(get_db)) -> SubmissionService:
+    return SubmissionService(db)
+
+
 @router.post("/{id}/answers")
-async def save_answers(id: str, payload: SaveAnswersPayload):
-    return None
+async def save_answers(
+    id: str,
+    payload: SaveAnswersPayload,
+    service: SubmissionService = Depends(get_service),
+):
+    return service.save_answers(id, payload)
 
 
 @router.post("/{id}/media")
@@ -22,34 +31,25 @@ async def upload_media(
     question_id: str = Form(...),
     type: str = Form(...),
     file: UploadFile = File(...),
+    service: SubmissionService = Depends(get_service),
 ):
-    print(f"Received file {file.filename} of type {type} for question {question_id}")
-    return None
+    return await service.upload_media(id, question_id, type, file)
 
 
 @router.post("/{id}/complete")
-async def complete_submission(id: str):
-    return {
-        "id": id,
-        "survey_id": "survey_123",
-        "started_at": "2026-03-09T10:05:00Z",
-        "completed_at": "2026-03-09T10:15:00Z",
-        "overall_score": 88,
-    }
+async def complete_submission(
+    id: str,
+    request: Request, 
+    service: SubmissionService = Depends(get_service),
+):
+    return await service.complete_submission(id, request)
 
 
 @router.get("/{submission_id}/export")
-async def export_submission(submission_id: str):
-    zip_buffer = io.BytesIO()
-
-    with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
-        mock_metadata = '{"submission_id": "sub_999", "overall_score": 88}'
-        zip_file.writestr("metadata.json", mock_metadata)
-        zip_file.writestr("videos/full_session.mp4", b"Mock Video Content")
-        zip_file.writestr("images/q1_face.png", b"Mock Image Content")
-
-    zip_buffer.seek(0)
-
+async def export_submission(
+    submission_id: str, service: SubmissionService = Depends(get_service)
+):
+    zip_buffer = service.export_submission(submission_id)
     return StreamingResponse(
         zip_buffer,
         media_type="application/zip",

@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 
 
 class AnswerPayload(BaseModel):
@@ -11,3 +12,14 @@ class AnswerPayload(BaseModel):
 
 class SaveAnswersPayload(BaseModel):
     answers: List[AnswerPayload]
+
+
+class SubmissionOut(BaseModel):
+    id: str
+    survey_id: str
+    started_at: datetime
+    completed_at: Optional[datetime] = None
+    overall_score: Optional[float] = None
+
+    class Config:
+        from_attributes = True
