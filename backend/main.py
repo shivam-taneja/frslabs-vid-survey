@@ -7,8 +7,8 @@ from db.database import engine, Base
 from modules.survey.router import router as survey_router
 from modules.submission.router import router as submission_router
 
-import modules.survey.models  # noqa
-import modules.submission.models  # noqa
+import modules.survey.models
+import modules.submission.models
 
 app = FastAPI(title="Video Survey API")
 
@@ -31,7 +31,7 @@ app.add_middleware(
     expose_headers=["X-Total-Count", "X-Page", "X-Per-Page"],
 )
 
-register_exception_handlers(app)  # ← only once
+register_exception_handlers(app)
 
 app.mount("/media", StaticFiles(directory=settings.MEDIA_ROOT), name="media")
 
