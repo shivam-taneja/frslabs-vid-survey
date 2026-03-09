@@ -1,0 +1,13 @@
+{
+  "name": "vid-survey-platform",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node scripts/check-deps.js && docker compose -f docker-compose.prod.yml --env-file .env.example up --build -d",
+    "stop": "docker compose -f docker-compose.prod.yml --env-file .env.example down",
+    "clean": "docker compose -f docker-compose.prod.yml --env-file .env.example down -v",
+    "dev:start": "node scripts/check-deps.js && docker compose up -d",
+    "dev:stop": "docker compose down",
+    "dev:clean": "docker compose down -v"
+  }
+}
