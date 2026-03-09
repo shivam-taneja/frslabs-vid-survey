@@ -1,11 +1,12 @@
-import os
 import json
 import zipfile
 import io
 import httpx
 from pathlib import Path
+from datetime import datetime, timezone
+
 from fastapi import HTTPException, UploadFile, Request
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from user_agents import parse as ua_parse
 
 from core.config import settings
@@ -28,38 +29,47 @@ class StorageService:
     ) -> str:
         dir_path = Path(self.media_root) / submission_id / subfolder
         dir_path.mkdir(parents=True, exist_ok=True)
+
         file_path = dir_path / filename
         file_path.write_bytes(data)
-        # Return relative path — store this in DB, not the absolute path
+
         return str(Path(submission_id) / subfolder / filename)
 
     def read(self, relative_path: str) -> bytes:
         full_path = Path(self.media_root) / relative_path
+
         if not full_path.exists():
             raise FileNotFoundError(f"Media not found: {relative_path}")
+
         return full_path.read_bytes()
 
 
 async def resolve_location(ip: str) -> str:
-    """IP → country/city string. Falls back to 'Unknown' gracefully."""
     if ip in ("127.0.0.1", "::1", "testclient"):
         return "Local"
+
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
             resp = await client.get(
                 f"http://ip-api.com/json/{ip}?fields=country,city,status"
             )
+
             data = resp.json()
+
             if data.get("status") == "success":
                 return f"{data.get('city', '')}, {data.get('country', '')}".strip(", ")
+
     except Exception:
         pass
+
     return "Unknown"
 
 
 def parse_user_agent(ua_string: str) -> dict:
     ua = ua_parse(ua_string)
+
     device = "Mobile" if ua.is_mobile else "Tablet" if ua.is_tablet else "Desktop"
+
     return {
         "browser": ua.browser.family,
         "os": ua.os.family,
@@ -72,25 +82,75 @@ class SubmissionService:
         self.db = db
         self.storage = StorageService()
 
-    async def start_submission(
-        self, survey_id: str, request: Request
-    ) -> SurveySubmission:
+    def _serialize_answer(self, a: SurveyAnswer):
+        return {
+            "id": a.id,
+            "submission_id": a.submission_id,
+            "question_id": a.question_id,
+            "question_text": a.question.question_text if a.question else None,
+            "answer": a.answer,
+            "face_detected": a.face_detected,
+            "face_score": a.face_score,
+            "face_image_path": a.face_image_path,
+        }
+
+    def get_submission(self, submission_id: str):
+      submission = (
+          self.db.query(SurveySubmission)
+          .filter(SurveySubmission.id == submission_id)
+          .first()
+      )
+
+      if not submission:
+          raise HTTPException(status_code=404, detail="Submission not found")
+
+      return submission
+
+    def get_answers(self, submission_id: str):
+        answers = (
+            self.db.query(SurveyAnswer)
+            .options(joinedload(SurveyAnswer.question))
+            .join(SurveyAnswer.question)
+            .filter(SurveyAnswer.submission_id == submission_id)
+            .order_by(SurveyQuestion.order)
+            .all()
+        )
+
+        return [self._serialize_answer(a) for a in answers]
+
+    def list_submissions_for_survey(self, survey_id: str):
+        survey = self.db.query(Survey).filter(Survey.id == survey_id).first()
+
+        if not survey:
+            raise HTTPException(status_code=404, detail="Survey not found")
+
+        return (
+            self.db.query(SurveySubmission)
+            .filter(SurveySubmission.survey_id == survey_id)
+            .order_by(SurveySubmission.started_at.desc())
+            .all()
+        )
+
+    async def start_submission(self, survey_id: str, request: Request):
         survey = (
             self.db.query(Survey)
             .filter(Survey.id == survey_id, Survey.is_active == True)
             .first()
         )
+
         if not survey:
             raise HTTPException(status_code=404, detail="Survey not found or inactive")
 
-        # Capture metadata at start
         ip = (
             request.headers.get("X-Forwarded-For", request.client.host)
             .split(",")[0]
             .strip()
         )
+
         ua_string = request.headers.get("User-Agent", "")
+
         ua_data = parse_user_agent(ua_string)
+
         location = await resolve_location(ip)
 
         submission = SurveySubmission(
@@ -101,9 +161,11 @@ class SubmissionService:
             os=ua_data["os"],
             location=location,
         )
+
         self.db.add(submission)
         self.db.commit()
         self.db.refresh(submission)
+
         return submission
 
     async def upload_media(
@@ -112,10 +174,11 @@ class SubmissionService:
         question_id: str,
         file_type: str,
         file: UploadFile,
-    ) -> MediaFile:
-        submission = self._get_submission(submission_id)
+    ):
+        self._get_submission(submission_id)
 
         content = await file.read()
+
         ext = Path(file.filename or "file").suffix or (
             ".webm" if file_type == "video" else ".png"
         )
@@ -124,8 +187,8 @@ class SubmissionService:
 
         relative_path = self.storage.save(submission_id, filename, subfolder, content)
 
-        # If it's an image, update the answer's face_image_path too
         if file_type == "image":
+
             answer = (
                 self.db.query(SurveyAnswer)
                 .filter(
@@ -134,6 +197,7 @@ class SubmissionService:
                 )
                 .first()
             )
+
             if answer:
                 answer.face_image_path = relative_path
                 self.db.add(answer)
@@ -144,19 +208,17 @@ class SubmissionService:
             type=file_type,
             path=relative_path,
         )
+
         self.db.add(media)
         self.db.commit()
         self.db.refresh(media)
+
         return media
 
-    def save_answers(
-        self, submission_id: str, payload: SaveAnswersPayload
-    ) -> list[SurveyAnswer]:
+    def save_answers(self, submission_id: str, payload: SaveAnswersPayload):
         self._get_submission(submission_id)
 
-        answers = []
         for a in payload.answers:
-            # Upsert: update if already exists (retry scenario)
             existing = (
                 self.db.query(SurveyAnswer)
                 .filter(
@@ -170,7 +232,7 @@ class SubmissionService:
                 existing.answer = a.answer
                 existing.face_detected = a.face_detected
                 existing.face_score = a.face_score
-                answers.append(existing)
+
             else:
                 answer = SurveyAnswer(
                     submission_id=submission_id,
@@ -179,47 +241,36 @@ class SubmissionService:
                     face_detected=a.face_detected,
                     face_score=a.face_score,
                 )
+
                 self.db.add(answer)
-                answers.append(answer)
 
         self.db.commit()
-        return answers
 
-    async def complete_submission(
-        self, submission_id: str, request: Request
-    ) -> SurveySubmission:
-        from datetime import datetime, timezone
+        return self.get_answers(submission_id)
 
+    async def complete_submission(self, submission_id: str, request: Request):
         submission = self._get_submission(submission_id)
-
-        # Refresh IP + location at completion (user may have switched networks)
-        ip = (
-            request.headers.get("X-Forwarded-For", request.client.host)
-            .split(",")[0]
-            .strip()
-        )
-        location = await resolve_location(ip)
-        submission.ip_address = ip
-        submission.location = location
 
         scores = [
             a.face_score
             for a in submission.answers
             if a.face_detected and a.face_score > 0
         ]
+
         submission.overall_score = (
             round(sum(scores) / len(scores), 2) if scores else 0.0
         )
+
         submission.completed_at = datetime.now(timezone.utc)
 
         self.db.commit()
         self.db.refresh(submission)
-        return submission
+
+        return self.get_submission(submission_id)
 
     def export_submission(self, submission_id: str) -> io.BytesIO:
         submission = self._get_submission(submission_id)
 
-        # Build metadata.json
         metadata = {
             "submission_id": submission.id,
             "survey_id": submission.survey_id,
@@ -247,37 +298,47 @@ class SubmissionService:
                 }
                 for a in sorted(
                     submission.answers,
-                    key=lambda x: x.question.order if x.question else 0,
+                    key=lambda x: getattr(x.question, "order", 0),
                 )
             ],
         }
 
         zip_buffer = io.BytesIO()
+
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
             zf.writestr("metadata.json", json.dumps(metadata, indent=2))
 
-            # Add all media files
             for media in submission.media_files:
                 try:
                     data = self.storage.read(media.path)
+
                     zip_path = (
                         f"videos/{Path(media.path).name}"
                         if media.type == "video"
                         else f"images/{Path(media.path).name}"
                     )
+
                     zf.writestr(zip_path, data)
+
                 except FileNotFoundError:
-                    pass  # Skip missing files gracefully
+                    pass
 
         zip_buffer.seek(0)
+
         return zip_buffer
 
-    def _get_submission(self, submission_id: str) -> SurveySubmission:
+    def _get_submission(self, submission_id: str):
         submission = (
             self.db.query(SurveySubmission)
+            .options(
+                joinedload(SurveySubmission.answers).joinedload(SurveyAnswer.question),
+                joinedload(SurveySubmission.media_files),
+            )
             .filter(SurveySubmission.id == submission_id)
             .first()
         )
+
         if not submission:
             raise HTTPException(status_code=404, detail="Submission not found")
+
         return submission

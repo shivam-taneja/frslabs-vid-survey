@@ -6,6 +6,7 @@ from sqlalchemy import (
     Integer,
     Float,
     ForeignKey,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import relationship
@@ -43,6 +44,11 @@ class SurveyAnswer(Base):
     face_score = Column(Integer, default=0)
     face_image_path = Column(String, nullable=True)
 
+    # Enforce one answer per question per submission at the DB level
+    __table_args__ = (
+        UniqueConstraint("submission_id", "question_id", name="uq_answer_per_question"),
+    )
+
     submission = relationship("SurveySubmission", back_populates="answers")
     question = relationship("SurveyQuestion", back_populates="answers")
 
@@ -52,7 +58,7 @@ class MediaFile(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     submission_id = Column(String, ForeignKey("survey_submissions.id"), nullable=False)
-    question_id = Column(String, nullable=True)
+    question_id = Column(String, ForeignKey("survey_questions.id"), nullable=True)
     type = Column(String, nullable=False)  # "video" | "image"
     path = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
