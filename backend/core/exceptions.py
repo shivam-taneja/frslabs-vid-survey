@@ -5,7 +5,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
 def register_exception_handlers(app: FastAPI):
-    # Catch HTTP Exceptions (e.g., 404, 400)
+
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         return JSONResponse(
@@ -19,7 +19,21 @@ def register_exception_handlers(app: FastAPI):
             },
         )
 
-    # Catch standard Python Exceptions
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ):
+        return JSONResponse(
+            status_code=422,
+            content={
+                "code": 422,
+                "message": "Validation Error",
+                "success": False,
+                "data": None,
+                "error": exc.errors(),
+            },
+        )
+
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
         return JSONResponse(
