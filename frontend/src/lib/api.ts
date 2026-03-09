@@ -14,7 +14,20 @@ api.interceptors.request.use(async (config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const data = response.data;
+
+    if (
+      data &&
+      typeof data === "object" &&
+      "success" in data &&
+      !data.success
+    ) {
+      return Promise.reject(new Error(data.error || data.message));
+    }
+
+    return response;
+  },
   (error) => {
     const message =
       error?.response?.data?.message ||
