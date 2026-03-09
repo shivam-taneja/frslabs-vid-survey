@@ -13,7 +13,10 @@ class Survey(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     questions = relationship(
-        "SurveyQuestion", back_populates="survey", order_by="SurveyQuestion.order"
+        "SurveyQuestion",
+        back_populates="survey",
+        order_by="SurveyQuestion.order",
+        cascade="all, delete-orphan",
     )
     submissions = relationship("SurveySubmission", back_populates="survey")
 

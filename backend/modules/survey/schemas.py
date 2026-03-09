@@ -15,6 +15,10 @@ class CreateSurveyPayload(BaseModel):
     title: str
 
 
+class UpdateSurveyPayload(BaseModel):
+    title: Optional[str] = None
+
+
 class QuestionOut(BaseModel):
     id: str
     survey_id: str
