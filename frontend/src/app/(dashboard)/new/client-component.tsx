@@ -53,7 +53,7 @@ export default function NewSurveyPage() {
         surveyId: survey.id,
         questions: data.questions.map((q, idx) => ({
           question_text: q,
-          order: idx,
+          order: idx + 1,
         })),
       });
 
