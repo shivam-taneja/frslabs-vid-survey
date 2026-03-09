@@ -44,7 +44,7 @@ export default function DashboardClient() {
         </div>
         <div className="flex items-center space-x-2">
           <Button asChild>
-            <Link href="/surveys/new">
+            <Link href="/new">
               <Plus className="mr-2 h-4 w-4" />
               Create Survey
             </Link>
@@ -114,7 +114,7 @@ export default function DashboardClient() {
                   You haven&apos;t created any video surveys yet.
                 </p>
                 <Button asChild variant="outline">
-                  <Link href="/surveys/new">
+                  <Link href="/new">
                     Create your first survey
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>

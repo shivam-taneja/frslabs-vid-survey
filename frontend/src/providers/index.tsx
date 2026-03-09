@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { ThemeProvider } from "./theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "sonner";
 
 export default function AppProviders({
   children,
@@ -31,6 +32,7 @@ export default function AppProviders({
         disableTransitionOnChange
       >
         <TooltipProvider>{children}</TooltipProvider>
+        <Toaster richColors position="top-right" theme="system" closeButton />
       </ThemeProvider>
     </QueryClientProvider>
   );

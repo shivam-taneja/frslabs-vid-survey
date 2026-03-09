@@ -1,6 +1,6 @@
 import api from "@/lib/api";
+import { SaveAnswersPayload } from "@/lib/validations/submission";
 import { ApiResponse } from "@/types/api-response";
-import { SaveAnswersPayload } from "@/types/submission";
 import { createMutation } from "react-query-kit";
 
 export const useSaveAnswer = createMutation<void, SaveAnswersPayload>({

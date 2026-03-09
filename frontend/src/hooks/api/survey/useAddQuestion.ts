@@ -1,6 +1,7 @@
 import api from "@/lib/api";
+import { AddQuestionsPayload } from "@/lib/validations/survey";
 import { ApiResponse } from "@/types/api-response";
-import { AddQuestionsPayload, SurveyQuestion } from "@/types/survey";
+import { SurveyQuestion } from "@/types/survey";
 import { createMutation } from "react-query-kit";
 
 export const useAddQuestion = createMutation<

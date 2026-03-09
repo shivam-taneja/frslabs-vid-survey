@@ -15,12 +15,3 @@ export interface SurveyQuestion {
 export interface SurveyWithQuestions extends Survey {
   questions: SurveyQuestion[];
 }
-
-export interface CreateSurveyPayload {
-  title: string;
-}
-
-export interface AddQuestionsPayload {
-  surveyId: string;
-  questions: { question_text: string; order: number }[];
-}
