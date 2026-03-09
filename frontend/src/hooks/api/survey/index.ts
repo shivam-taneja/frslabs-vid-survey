@@ -1,3 +1,4 @@
+export { useGetSurveys } from "./useGetSurveys";
 export { useAddQuestion } from "./useAddQuestion";
 export { useCreateSurvey } from "./useCreateSurvey";
 export { useGetSurvey } from "./useGetSurvey";
