@@ -1,8 +1,12 @@
+from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from core.exceptions import register_exception_handlers
+
 from core.config import settings
+from core.exceptions import register_exception_handlers
 from db.database import engine, Base
 from modules.survey.router import router as survey_router
 from modules.submission.router import router as submission_router
@@ -10,14 +14,19 @@ from modules.submission.router import router as submission_router
 import modules.survey.models
 import modules.submission.models
 
-app = FastAPI(title="Video Survey API")
 
-
-@app.on_event("startup")
-def create_tables():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    Path(settings.MEDIA_ROOT).mkdir(parents=True, exist_ok=True)
+    yield
 
 
+app = FastAPI(title="Video Survey API", lifespan=lifespan)
+
+
+# CORS is intentionally kept for local development (frontend/backend on different ports).
+# In production, Nginx proxies both under the same origin so these headers are never sent.
 ALLOWED_ORIGIN_REGEXES = [
     r"^http://localhost(:\d+)?$",
 ]
