@@ -1,8 +1,8 @@
 import api from "@/lib/api";
 import { createMutation } from "react-query-kit";
 
-export const useExportSubmissionMutation = createMutation<
-  void,
+export const useExportSubmission = createMutation<
+  Blob,
   { submissionId: string }
 >({
   mutationFn: async ({ submissionId }) => {
@@ -10,13 +10,6 @@ export const useExportSubmissionMutation = createMutation<
       responseType: "blob",
     });
 
-    const url = window.URL.createObjectURL(new Blob([res.data]));
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `${submissionId}.zip`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
+    return res.data;
   },
 });

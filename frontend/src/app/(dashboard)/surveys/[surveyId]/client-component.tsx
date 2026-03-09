@@ -1,57 +1,19 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  Loader2,
-  CheckCircle,
-  Copy,
-  ExternalLink,
-  AlertCircle,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { useGetSurvey, usePublishSurvey } from "@/hooks/api/survey";
-import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
+import { useGetSurvey } from "@/hooks/api/survey";
+import SurveyHeader from "@/components/survey/header";
+import SurveyLiveCard from "@/components/survey/live-card";
+import SurveyQuestionsCard from "@/components/survey/questions-card";
 
 export default function SurveyDetailsPage() {
   const params = useParams();
   const surveyId = params.surveyId as string;
-  const queryClient = useQueryClient();
 
-  const {
-    data: survey,
-    isLoading,
-    isFetching,
-  } = useGetSurvey({ variables: { surveyId } });
-
-  const publishMutation = usePublishSurvey();
-
-  const handlePublish = async () => {
-    try {
-      await publishMutation.mutateAsync({ surveyId });
-      toast.success("Survey published successfully!");
-
-      queryClient.invalidateQueries({
-        queryKey: useGetSurvey.getKey({ surveyId }),
-      });
-    } catch (error) {
-      toast.error("Failed to publish survey.");
-      console.error(error);
-    }
-  };
-
-  const copyLink = () => {
-    const url = `${window.location.origin}/survey/${surveyId}`;
-    navigator.clipboard.writeText(url);
-    toast.success("Public link copied to clipboard!");
-  };
+  const { data: survey, isLoading } = useGetSurvey({
+    variables: { surveyId },
+  });
 
   if (isLoading) {
     return (
@@ -65,92 +27,11 @@ export default function SurveyDetailsPage() {
 
   return (
     <div className="flex-1 space-y-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">{survey.title}</h2>
-          <div className="flex items-center mt-2 space-x-2">
-            <span className="text-sm text-muted-foreground">Status:</span>
+      <SurveyHeader survey={survey} />
 
-            {isFetching ? (
-              <span className="flex items-center text-sm text-muted-foreground font-medium">
-                <Loader2 className="w-4 h-4 mr-1 animate-spin" /> Updating...
-              </span>
-            ) : survey.is_active ? (
-              <span className="flex items-center text-sm text-green-600 font-medium">
-                <CheckCircle className="w-4 h-4 mr-1" /> Published
-              </span>
-            ) : (
-              <span className="flex items-center text-sm text-orange-500 font-medium">
-                <AlertCircle className="w-4 h-4 mr-1" /> Draft
-              </span>
-            )}
-          </div>
-        </div>
+      {survey.is_active && <SurveyLiveCard surveyId={survey.id} />}
 
-        {!survey.is_active && (
-          <Button
-            onClick={handlePublish}
-            disabled={publishMutation.isPending || isFetching}
-          >
-            {publishMutation.isPending && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            )}
-            Publish Survey
-          </Button>
-        )}
-      </div>
-
-      {survey.is_active && (
-        <Card className="bg-primary/5 border-primary/20">
-          <CardHeader>
-            <CardTitle className="text-lg text-primary">
-              Survey is Live!
-            </CardTitle>
-            <CardDescription>
-              Share this link with your participants.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center space-x-2">
-            <code className="flex-1 p-3 bg-background rounded border text-sm">
-              {typeof window !== "undefined"
-                ? `${window.location.origin}/survey/${surveyId}`
-                : ""}
-            </code>
-            <Button variant="outline" size="icon" onClick={copyLink}>
-              <Copy className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" asChild>
-              <a href={`/survey/${surveyId}`} target="_blank" rel="noreferrer">
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Questions</CardTitle>
-          <CardDescription>
-            The 5 Yes/No questions attached to this survey.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-4">
-            {survey.questions?.map((q, i) => (
-              <li
-                key={q.id}
-                className="p-4 border rounded-lg flex gap-4 items-center"
-              >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted font-bold text-sm">
-                  {i + 1}
-                </div>
-                <p className="font-medium">{q.question_text}</p>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+      <SurveyQuestionsCard questions={survey.questions} />
     </div>
   );
 }
