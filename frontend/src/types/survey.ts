@@ -15,3 +15,11 @@ export interface SurveyQuestion {
 export interface SurveyWithQuestions extends Survey {
   questions: SurveyQuestion[];
 }
+
+export type SurveyStep =
+  | "welcome"
+  | "permission"
+  | "recording"
+  | "submitting"
+  | "completed"
+  | "error";
