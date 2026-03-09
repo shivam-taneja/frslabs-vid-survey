@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Loader2,
   CheckCircle,
@@ -22,22 +23,32 @@ import { toast } from "sonner";
 export default function SurveyDetailsPage() {
   const params = useParams();
   const surveyId = params.surveyId as string;
+  const queryClient = useQueryClient();
 
   const {
     data: survey,
     isLoading,
-    refetch,
+    isFetching,
   } = useGetSurvey({ variables: { surveyId } });
+
   const publishMutation = usePublishSurvey();
 
   const handlePublish = async () => {
-    await publishMutation.mutateAsync({ surveyId });
-    refetch();
+    try {
+      await publishMutation.mutateAsync({ surveyId });
+      toast.success("Survey published successfully!");
+
+      queryClient.invalidateQueries({
+        queryKey: useGetSurvey.getKey({ surveyId }),
+      });
+    } catch (error) {
+      toast.error("Failed to publish survey.");
+      console.error(error);
+    }
   };
 
   const copyLink = () => {
     const url = `${window.location.origin}/survey/${surveyId}`;
-
     navigator.clipboard.writeText(url);
     toast.success("Public link copied to clipboard!");
   };
@@ -59,7 +70,12 @@ export default function SurveyDetailsPage() {
           <h2 className="text-3xl font-bold tracking-tight">{survey.title}</h2>
           <div className="flex items-center mt-2 space-x-2">
             <span className="text-sm text-muted-foreground">Status:</span>
-            {survey.is_active ? (
+
+            {isFetching ? (
+              <span className="flex items-center text-sm text-muted-foreground font-medium">
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" /> Updating...
+              </span>
+            ) : survey.is_active ? (
               <span className="flex items-center text-sm text-green-600 font-medium">
                 <CheckCircle className="w-4 h-4 mr-1" /> Published
               </span>
@@ -72,7 +88,10 @@ export default function SurveyDetailsPage() {
         </div>
 
         {!survey.is_active && (
-          <Button onClick={handlePublish} disabled={publishMutation.isPending}>
+          <Button
+            onClick={handlePublish}
+            disabled={publishMutation.isPending || isFetching}
+          >
             {publishMutation.isPending && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}

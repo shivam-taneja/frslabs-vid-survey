@@ -37,8 +37,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "My Surveys", url: "/surveys", icon: FileVideo },
-  { title: "Create Survey", url: "/new", icon: PlusCircle },
-  { title: "Settings", url: "/settings", icon: Settings },
+  { title: "Create Survey", url: "/new", icon: PlusCircle }
 ];
 
 function NavItems({ items }: { items: NavItem[] }) {
