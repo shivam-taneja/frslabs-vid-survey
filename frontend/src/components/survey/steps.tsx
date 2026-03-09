@@ -5,6 +5,7 @@ import {
   X,
   AlertTriangle,
   ShieldCheck,
+  Timer,
 } from "lucide-react";
 import {
   Card,
@@ -37,7 +38,10 @@ export interface RecordingStepProps {
   isFaceDetected: boolean;
   step: SurveyStep;
   isInteractionDisabled: boolean;
-  onAnswer: (answer: "yes" | "no") => void;
+  onAnswer: (answer: "yes" | "no" | null) => void;
+  timeLeft: number;
+  retryCount: number;
+  maxRetries: number;
 }
 
 export interface ErrorStepProps {
@@ -53,9 +57,9 @@ export function WelcomeStep({ survey, onStart, isPending }: WelcomeStepProps) {
         </div>
         <CardTitle className="text-3xl font-semibold">{survey.title}</CardTitle>
         <CardDescription className="text-base mt-3 leading-relaxed">
-          This survey requires camera and microphone access. A short video
-          segment will be recorded per question for automated face detection. No
-          personal information is stored.
+          This survey requires camera access. A short video segment will be
+          recorded per question for automated face detection. No personal
+          information is stored.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 pt-2">
@@ -91,7 +95,7 @@ export function PermissionStep() {
       <Loader2 className="w-12 h-12 mx-auto mb-5 animate-spin text-primary" />
       <CardTitle className="text-xl mb-2">Requesting Permissions…</CardTitle>
       <CardDescription>
-        Please allow camera and microphone access in your browser prompt.
+        Please allow camera access in your browser prompt.
       </CardDescription>
     </Card>
   );
@@ -107,12 +111,19 @@ export function RecordingStep({
   step,
   isInteractionDisabled,
   onAnswer,
+  timeLeft,
+  retryCount,
+  maxRetries,
 }: RecordingStepProps) {
   return (
     <div className="space-y-5">
       <Progress value={progressPct} className="h-1.5" />
-      <Card className="bg-background/85 backdrop-blur-xl border-border/50 shadow-2xl">
+      <Card className="bg-background/85 backdrop-blur-xl border-border/50 shadow-2xl relative">
         <CardHeader className="text-center pb-6">
+          <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-destructive/10 text-destructive font-mono font-semibold text-sm px-3 py-1 rounded-full border border-destructive/20">
+            <Timer className="w-3.5 h-3.5" />
+            00:{timeLeft.toString().padStart(2, "0")}
+          </div>
           <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">
             Question {currentQuestionIndex + 1} of {totalQuestions}
           </p>
@@ -131,10 +142,15 @@ export function RecordingStep({
             <div className="flex items-start gap-3 p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive">
               <AlertTriangle className="w-5 h-5 shrink-0" />
               <p className="text-sm font-medium">
-                Face not clearly detected. Please ensure you are visible to
-                answer.
+                Face not clearly detected (or multiple faces). Please ensure a
+                single face is visible.
               </p>
             </div>
+          )}
+          {retryCount > 0 && (
+            <p className="text-sm text-muted-foreground">
+              Retries: {retryCount}/{maxRetries}
+            </p>
           )}
           <div className="grid grid-cols-2 gap-4">
             <Button
@@ -143,6 +159,7 @@ export function RecordingStep({
               className="h-20 text-xl font-medium border-2 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/60 transition-all duration-200 disabled:opacity-40"
               disabled={isInteractionDisabled}
               onClick={() => onAnswer("no")}
+              aria-label="Answer No"
             >
               <X className="mr-2 w-5 h-5" />
               No
@@ -152,6 +169,7 @@ export function RecordingStep({
               className="h-20 text-xl font-medium border-2 border-transparent hover:bg-green-500/10 hover:text-green-600 hover:border-green-500/50 transition-all duration-200 disabled:opacity-40"
               disabled={isInteractionDisabled}
               onClick={() => onAnswer("yes")}
+              aria-label="Answer Yes"
             >
               <Check className="mr-2 w-5 h-5" />
               Yes
@@ -207,9 +225,8 @@ export function ErrorStep({ onRetry }: ErrorStepProps) {
           Unable to Proceed
         </CardTitle>
         <CardDescription className="text-base mt-3 leading-relaxed">
-          We could not access your camera or microphone. This survey requires
-          video capabilities. Please check your browser permissions and reload
-          the page to try again.
+          We could not access your camera. This survey requires video
+          capabilities. Please check your browser permissions and retry.
         </CardDescription>
       </CardHeader>
       <CardContent>

@@ -3,8 +3,11 @@ import { ApiResponse } from "@/types/api-response";
 import { UploadMediaPayload } from "@/types/submission";
 import { createMutation } from "react-query-kit";
 
-export const useUploadMedia = createMutation<void, UploadMediaPayload>({
-  mutationFn: async ({ submissionId, questionId, type, file }) => {
+export const useUploadMedia = createMutation<
+  void,
+  UploadMediaPayload & { signal?: AbortSignal }
+>({
+  mutationFn: async ({ submissionId, questionId, type, file, signal }) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("type", type);
@@ -17,6 +20,7 @@ export const useUploadMedia = createMutation<void, UploadMediaPayload>({
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        signal,
       },
     );
   },

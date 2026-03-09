@@ -6,7 +6,7 @@ export const saveAnswersSchema = z.object({
     .array(
       z.object({
         question_id: z.string().min(1),
-        answer: z.enum(["yes", "no"]),
+        answer: z.enum(["yes", "no", "skipped"]),
         face_detected: z.boolean(),
         face_score: z.number().min(0).max(100),
       }),
