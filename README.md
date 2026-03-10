@@ -2,6 +2,10 @@
 
 A privacy-first video survey platform. Users complete a 5-question Yes/No survey while their camera records short video segments per question. Face detection runs client-side per question, generating a visibility score and face snapshot. No personal identifiers are collected.
 
+## Demo
+
+[Watch the demo](./demo.mp4)
+
 ## Architecture & Tech Stack
 
 This project utilizes a containerized microservices architecture. An Nginx reverse proxy sits in front of the application, routing traffic securely to the frontend and backend on a single origin, completely eliminating CORS complexities.
