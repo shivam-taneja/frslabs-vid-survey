@@ -19,17 +19,17 @@ def get_service(db: Session = Depends(get_db)) -> SubmissionService:
 
 
 @router.get("/{id}", response_model=SubmissionOut)
-async def get_submission(id: str, service: SubmissionService = Depends(get_service)):
+def get_submission(id: str, service: SubmissionService = Depends(get_service)):
     return service.get_submission(id)
 
 
 @router.get("/{id}/answers", response_model=list[AnswerOut])
-async def get_answers(id: str, service: SubmissionService = Depends(get_service)):
+def get_answers(id: str, service: SubmissionService = Depends(get_service)):
     return service.get_answers(id)
 
 
 @router.post("/{id}/answers", response_model=list[AnswerOut])
-async def save_answers(
+def save_answers(
     id: str,
     payload: SaveAnswersPayload,
     service: SubmissionService = Depends(get_service),
@@ -49,16 +49,16 @@ async def upload_media(
 
 
 @router.post("/{id}/complete", response_model=SubmissionOut)
-async def complete_submission(
+def complete_submission(
     id: str,
     request: Request,
     service: SubmissionService = Depends(get_service),
 ):
-    return await service.complete_submission(id, request)
+    return service.complete_submission(id, request)
 
 
 @router.get("/{submission_id}/export")
-async def export_submission(
+def export_submission(
     submission_id: str,
     service: SubmissionService = Depends(get_service),
 ):

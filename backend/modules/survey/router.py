@@ -20,24 +20,24 @@ def get_submission_service(db: Session = Depends(get_db)) -> SubmissionService:
 
 
 @router.get("")
-async def list_surveys(service: SurveyService = Depends(get_survey_service)):
+def list_surveys(service: SurveyService = Depends(get_survey_service)):
     return service.list_surveys()
 
 
 @router.post("")
-async def create_survey(
+def create_survey(
     payload: CreateSurveyPayload, service: SurveyService = Depends(get_survey_service)
 ):
     return service.create_survey(payload)
 
 
 @router.get("/{id}")
-async def get_survey(id: str, service: SurveyService = Depends(get_survey_service)):
+def get_survey(id: str, service: SurveyService = Depends(get_survey_service)):
     return service.get_survey(id)
 
 
 @router.patch("/{id}")
-async def update_survey(
+def update_survey(
     id: str,
     payload: UpdateSurveyPayload,
     service: SurveyService = Depends(get_survey_service),
@@ -46,12 +46,12 @@ async def update_survey(
 
 
 @router.delete("/{id}")
-async def delete_survey(id: str, service: SurveyService = Depends(get_survey_service)):
+def delete_survey(id: str, service: SurveyService = Depends(get_survey_service)):
     return service.delete_survey(id)
 
 
 @router.post("/{id}/questions")
-async def add_questions(
+def add_questions(
     id: str,
     payload: AddQuestionsPayload,
     service: SurveyService = Depends(get_survey_service),
@@ -60,14 +60,14 @@ async def add_questions(
 
 
 @router.get("/{id}/submissions")
-async def list_submissions(
+def list_submissions(
     id: str, service: SubmissionService = Depends(get_submission_service)
 ):
     return service.list_submissions_for_survey(id)
 
 
 @router.patch("/{id}/toggle")
-async def toggle_survey(
+def toggle_survey(
     id: str,
     service: SurveyService = Depends(get_survey_service),
 ):

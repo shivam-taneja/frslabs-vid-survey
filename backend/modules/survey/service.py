@@ -121,18 +121,6 @@ class SurveyService:
             raise HTTPException(status_code=404, detail="Survey not found")
         return survey
 
-    def publish_survey(self, survey_id: str) -> Survey:
-        survey = self.get_survey(survey_id)
-        if len(survey.questions) != 5:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Survey must have exactly 5 questions (has {len(survey.questions)})",
-            )
-        survey.is_active = True
-        self.db.commit()
-        self.db.refresh(survey)
-        return survey
-
     def list_surveys(self) -> list[Survey]:
         return self.db.query(Survey).order_by(Survey.created_at.desc()).all()
 

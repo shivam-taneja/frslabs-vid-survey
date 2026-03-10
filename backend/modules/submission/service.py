@@ -95,16 +95,16 @@ class SubmissionService:
         }
 
     def get_submission(self, submission_id: str):
-      submission = (
-          self.db.query(SurveySubmission)
-          .filter(SurveySubmission.id == submission_id)
-          .first()
-      )
+        submission = (
+            self.db.query(SurveySubmission)
+            .filter(SurveySubmission.id == submission_id)
+            .first()
+        )
 
-      if not submission:
-          raise HTTPException(status_code=404, detail="Submission not found")
+        if not submission:
+            raise HTTPException(status_code=404, detail="Submission not found")
 
-      return submission
+        return submission
 
     def get_answers(self, submission_id: str):
         answers = (
@@ -248,7 +248,7 @@ class SubmissionService:
 
         return self.get_answers(submission_id)
 
-    async def complete_submission(self, submission_id: str, request: Request):
+    def complete_submission(self, submission_id: str, request: Request):
         submission = self._get_submission(submission_id)
 
         scores = [
